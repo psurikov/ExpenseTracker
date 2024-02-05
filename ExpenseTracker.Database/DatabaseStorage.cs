@@ -10,25 +10,21 @@ namespace ExpenseTracker.Database
     /// </summary>
     public sealed class DatabaseStorage : IStorage, IDisposable
     {
-        IServiceProvider serviceProvider;
+        private readonly DatabaseContext databaseContext;
         
-        public DatabaseStorage(IServiceProvider serviceProvider)
+        public DatabaseStorage(DatabaseContext databaseContext)
         {
-            this.serviceProvider = serviceProvider;
+            this.databaseContext = databaseContext;
         }
 
         public async Task<IEnumerable<Expense>> GetExpensesAsync()
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var expenses = await databaseContext.Expenses.ToListAsync();
             return await Task.FromResult(expenses.Select(e => FromExpenseRecord(e)));
         }
 
         public async Task<Expense> AddExpenseAsync(Expense expense)
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var expenseRecord = ToExpenseRecord(expense);
             await databaseContext.Expenses.AddAsync(expenseRecord);
             await databaseContext.SaveChangesAsync();
@@ -37,8 +33,6 @@ namespace ExpenseTracker.Database
 
         public async Task<bool> RemoveExpenseAsync(int id)
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var expenses = databaseContext.Expenses.Where(e => e.Id == id);
             if (!expenses.Any())
                 return false;
@@ -49,8 +43,6 @@ namespace ExpenseTracker.Database
 
         public async Task<bool> ClearExpensesAsync()
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             if (databaseContext.Expenses.Any() == false)
                 return false;
             databaseContext.Expenses.RemoveRange(databaseContext.Expenses);
@@ -60,16 +52,12 @@ namespace ExpenseTracker.Database
 
         public async Task<IEnumerable<Currency>> GetCurrenciesAsync()
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var currencies = await databaseContext.Currencies.ToListAsync();
             return await Task.FromResult(currencies.Select(e => FromCurrencyRecord(e)));
         }
 
         public async Task<IEnumerable<Category>> GetCategoriesAsync()
         {
-            using var scope = serviceProvider.CreateScope();
-            var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var categories = await databaseContext.Categories.ToListAsync();
             return await Task.FromResult(categories.Select(e => FromCategoryRecord(e)));
         }
@@ -117,7 +105,7 @@ namespace ExpenseTracker.Database
 
         public void Dispose()
         {
-            //serviceProvider.Dispose();
+            databaseContext.Dispose();
         }
     }
 
@@ -126,7 +114,7 @@ namespace ExpenseTracker.Database
         public static void AddDatabaseStorage(this IServiceCollection services)
         {
             services.AddDbContext<DatabaseContext>();
-            services.AddSingleton<IStorage, DatabaseStorage>();
+            services.AddScoped<IStorage, DatabaseStorage>();
         }
     }
 }
