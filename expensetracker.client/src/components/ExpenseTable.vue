@@ -90,14 +90,14 @@
             },
             async clearExpenses() {
                 try {
-                    var response = await fetch('expenses/clearExpenses');
+                    var response = await fetch('expenses/clearExpenses', { method: 'DELETE' });
                     if (!response.ok)
                         throw new Error('The server responded with error!');
                     this.loading = false;
                     store.expenses = [];
                 }
                 catch (error) {
-                    console.error('Failed to get expenses:', error);
+                    console.error('Failed to clear expenses:', error);
                 }
             },
             showAddExpense() {
